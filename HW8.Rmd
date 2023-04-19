@@ -9,6 +9,7 @@ output: html_document
 library(tidyverse)
 library(dplyr)
 library(readxl)
+library(sqldf)
 ```
 
 ```{r}
@@ -27,6 +28,20 @@ health = read_xlsx("./HW8-HEALTH.xlsx") %>%
 ### Question (b)
 
 ```{r}
+# data manipulation
+base = health %>% 
+  filter(time == 1)%>% 
+  select(id, health) %>% 
+  rename(baseline = health)
+# make time 1 as variable baseline
+gee_df = sqldf("
+      SELECT *
+      FROM health
+      LEFT JOIN base
+      USING(id)
+      ") %>% 
+  filter(time != 1)
+# 
 
 ```
 

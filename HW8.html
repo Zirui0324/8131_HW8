@@ -359,7 +359,8 @@ display: none;
 
 <pre class="r"><code>library(tidyverse)
 library(dplyr)
-library(readxl)</code></pre>
+library(readxl)
+library(sqldf)</code></pre>
 <pre class="r"><code># data import
 health = read_xlsx(&quot;./HW8-HEALTH.xlsx&quot;) %&gt;%
   janitor::clean_names() %&gt;% 
@@ -369,6 +370,20 @@ health = read_xlsx(&quot;./HW8-HEALTH.xlsx&quot;) %&gt;%
 </div>
 <div id="question-b" class="section level3">
 <h3>Question (b)</h3>
+<pre class="r"><code># data manipulation
+base = health %&gt;% 
+  filter(time == 1)%&gt;% 
+  select(id, health) %&gt;% 
+  rename(baseline = health)
+# make time 1 as variable baseline
+gee_df = sqldf(&quot;
+      SELECT *
+      FROM health
+      LEFT JOIN base
+      USING(id)
+      &quot;) %&gt;% 
+  filter(time != 1)
+# </code></pre>
 </div>
 
 
