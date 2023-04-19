@@ -1,0 +1,34 @@
+---
+title: "HW8"
+author: "Zirui Zhang"
+date: "2023-04-19"
+output: html_document
+---
+
+```{r setup, message=FALSE}
+library(tidyverse)
+library(dplyr)
+library(readxl)
+```
+
+```{r}
+# data import
+health = read_xlsx("./HW8-HEALTH.xlsx") %>%
+  janitor::clean_names() %>% 
+  mutate(health = as.numeric(health == "Good"))
+```
+### Question (a)
+
+```{r}
+
+```
+
+
+### Question (b)
+
+```{r}
+
+```
+
+
+
