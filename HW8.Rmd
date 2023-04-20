@@ -11,6 +11,8 @@ library(dplyr)
 library(readxl)
 library(sqldf)
 library(gee)
+library(lme4)
+library(nlme)
 ```
 
 ```{r}
@@ -34,11 +36,11 @@ lg = glm(txt ~ health, data = group, family = binomial(link = 'logit'))
 summary(lg)
 ```
 $$ log\frac{\pi}{1-\pi} = 0.091 - 0.314*health $$
-When a patient's health changes from "poor" to "good", the odds of he/she assigned to the intervention group decrease by `r round(1-exp(lg$coefficients)[2], 4)`. However, as the p-value is greater than 0.05, the relationship is not significant here. Being in poor or good health at baseline wouldn't affect the group which the patient would be assigned into.
+When a patient's health changes from "poor" to "good", the odds of he/she assigned to the intervention group decrease by `r round(1-exp(lg$coefficients)[2], 4)`. However, as the p-value is greater than 0.05, the relationship is not significant here. Being in poor or good health at baseline wouldn't affect the group of which the patient would be assigned into.
 
 ### Question (b)
 
-```{r}
+```{r message=FALSE}
 # data manipulation
 base = health %>% 
   filter(time == 1)%>% 
@@ -60,17 +62,38 @@ exp(gee$coefficients)
 
 Interpretation: 
 
-- Baseline: On average within a population, holding other variables, the odds of reporting good health would be 6.15 between subpopulations reporting good health compared to poor health at baseline;
+- Baseline: On average within a population, holding other variables fixed, the odds ratio of reporting good health would be 6.15 between subpopulations reporting good health compared to poor health at baseline;
 
-- Treatment group: On average within a population, holding other variables, the odds of reporting good health would be 8.18 between subpopulations in intervention group compared to control group;
+- Treatment group: On average within a population, holding other variables fixed, the odds ratio of reporting good health would be 8.18 between subpopulations in intervention group compared to control group;
 
-- 6 month: On average within a population, holding other variables, the odds of reporting good health would be 1.32 between reports of subpopulations at 6 months compared to at 3 months;
+- 6 month: On average within a population, holding other variables fixed, the odds ratio of reporting good health would be 1.32 between reports of subpopulations at 6 months compared to at 3 months;
 
-- 12 month: On average within a population, holding other variables, the odds of reporting good health would be 1.33 between reports of subpopulations at 12 months compared to at 3 months;
+- 12 month: On average within a population, holding other variables fixed, the odds ratio of reporting good health would be 1.33 between reports of subpopulations at 12 months compared to at 3 months;
 
-- Age group 25-34: On average within a population, holding other variables, the odds of reporting good health would be 3.80 between subpopulations of age 25-34 compared to those of age 15-24;
+- Age group 25-34: On average within a population, holding other variables fixed, the odds ratio of reporting good health would be 3.80 between subpopulations of age 25-34 compared to those of age 15-24;
 
-- Age group 35+: On average within a population, holding other variables, the odds of reporting good health would be 3.80 between subpopulations of age 35+ compared to those of age 15-24;
+- Age group 35+: On average within a population, holding other variables fixed, the odds ratio of reporting good health would be 3.80 between subpopulations of age 35+ compared to those of age 15-24;
 
+
+### Question (c)
+
+```{r}
+# fit glmm model
+glmm = glmer(health ~ time + txt + agegroup + (1|id), family = "binomial", data = health)
+summary(glmm)
+exp(fixed.effects(glmm))
+```
+
+- Time: On average for an individual, holding other variables, when time increases by 1 month, we would expect to see a 15.5% increase in the odds of reporting good health;
+
+- Treatment group: On average for an individual, holding other variables fixed, when treatment group changes from control to intervention, we would expect to see a 236.2% increase in the odds of reporting good health;
+
+- Age group 25-34: On average for an individual, holding other variables fixed, when age group changes from 15-24 to 25-34, we would expect to see a 115.8% increase in the odds of reporting good health;
+
+- Age group 35+: On average for an individual, holding other variables fixed, when age group changes from 25-34 to 35+, we would expect to see a 41.2% increase in the odds of reporting good health;
+
+Difference between interpretations:
+
+The interpretation of GEE models focus on within population level change while the interpretation of GLMM models focus on individual level change.
 
 

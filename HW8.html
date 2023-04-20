@@ -361,7 +361,9 @@ display: none;
 library(dplyr)
 library(readxl)
 library(sqldf)
-library(gee)</code></pre>
+library(gee)
+library(lme4)
+library(nlme)</code></pre>
 <pre class="r"><code># data import
 health = read_xlsx(&quot;./HW8-HEALTH.xlsx&quot;) %&gt;%
   janitor::clean_names() %&gt;% 
@@ -403,8 +405,8 @@ summary(lg)</code></pre>
 “good”, the odds of he/she assigned to the intervention group decrease
 by 0.2696. However, as the p-value is greater than 0.05, the
 relationship is not significant here. Being in poor or good health at
-baseline wouldn’t affect the group which the patient would be assigned
-into.</p>
+baseline wouldn’t affect the group of which the patient would be
+assigned into.</p>
 </div>
 <div id="question-b" class="section level3">
 <h3>Question (b)</h3>
@@ -423,8 +425,6 @@ gee_df = sqldf(&quot;
   filter(time != 1) 
 # fit gee model
 gee = gee(health ~ as.factor(baseline) + txt + as.factor(time) + agegroup, data=gee_df, family=&quot;binomial&quot;,id=id, corstr=&quot;unstructured&quot;, scale.fix=FALSE)</code></pre>
-<pre><code>## Beginning Cgee S-function, @(#) geeformula.q 4.13 98/01/27</code></pre>
-<pre><code>## running glm to get initial regression estimate</code></pre>
 <pre><code>##          (Intercept) as.factor(baseline)1      txtIntervention 
 ##           -1.5199450            1.7192117            2.0042708 
 ##     as.factor(time)6    as.factor(time)12        agegroup25-34 
@@ -478,26 +478,93 @@ gee = gee(health ~ as.factor(baseline) + txt + as.factor(time) + agegroup, data=
 ##            4.1012448</code></pre>
 <p>Interpretation:</p>
 <ul>
-<li><p>Baseline: On average within a population, holding other
-variables, the odds of reporting good health would be 6.15 between
+<li><p>Baseline: On average within a population, holding other variables
+fixed, the odds ratio of reporting good health would be 6.15 between
 subpopulations reporting good health compared to poor health at
 baseline;</p></li>
 <li><p>Treatment group: On average within a population, holding other
-variables, the odds of reporting good health would be 8.18 between
-subpopulations in intervention group compared to control group;</p></li>
-<li><p>6 month: On average within a population, holding other variables,
-the odds of reporting good health would be 1.32 between reports of
-subpopulations at 6 months compared to at 3 months;</p></li>
-<li><p>12 month: On average within a population, holding other
-variables, the odds of reporting good health would be 1.33 between
+variables fixed, the odds ratio of reporting good health would be 8.18
+between subpopulations in intervention group compared to control
+group;</p></li>
+<li><p>6 month: On average within a population, holding other variables
+fixed, the odds ratio of reporting good health would be 1.32 between
+reports of subpopulations at 6 months compared to at 3 months;</p></li>
+<li><p>12 month: On average within a population, holding other variables
+fixed, the odds ratio of reporting good health would be 1.33 between
 reports of subpopulations at 12 months compared to at 3 months;</p></li>
 <li><p>Age group 25-34: On average within a population, holding other
-variables, the odds of reporting good health would be 3.80 between
-subpopulations of age 25-34 compared to those of age 15-24;</p></li>
+variables fixed, the odds ratio of reporting good health would be 3.80
+between subpopulations of age 25-34 compared to those of age
+15-24;</p></li>
 <li><p>Age group 35+: On average within a population, holding other
-variables, the odds of reporting good health would be 3.80 between
-subpopulations of age 35+ compared to those of age 15-24;</p></li>
+variables fixed, the odds ratio of reporting good health would be 3.80
+between subpopulations of age 35+ compared to those of age
+15-24;</p></li>
 </ul>
+</div>
+<div id="question-c" class="section level3">
+<h3>Question (c)</h3>
+<pre class="r"><code># fit glmm model
+glmm = glmer(health ~ time + txt + agegroup + (1|id), family = &quot;binomial&quot;, data = health)
+summary(glmm)</code></pre>
+<pre><code>## Generalized linear mixed model fit by maximum likelihood (Laplace
+##   Approximation) [glmerMod]
+##  Family: binomial  ( logit )
+## Formula: health ~ time + txt + agegroup + (1 | id)
+##    Data: health
+## 
+##      AIC      BIC   logLik deviance df.resid 
+##    328.6    350.3   -158.3    316.6      273 
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -2.6168 -0.5338  0.3268  0.5211  2.0710 
+## 
+## Random effects:
+##  Groups Name        Variance Std.Dev.
+##  id     (Intercept) 2.386    1.545   
+## Number of obs: 279, groups:  id, 80
+## 
+## Fixed effects:
+##                 Estimate Std. Error z value Pr(&gt;|z|)   
+## (Intercept)     -0.92699    0.46058  -2.013   0.0441 * 
+## time             0.14397    0.04613   3.121   0.0018 **
+## txtIntervention  1.21265    0.48585   2.496   0.0126 * 
+## agegroup25-34    0.76899    0.50895   1.511   0.1308   
+## agegroup35+      0.34509    0.83832   0.412   0.6806   
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Correlation of Fixed Effects:
+##             (Intr) time   txtInt a25-34
+## time        -0.436                     
+## txtIntrvntn -0.510  0.064              
+## agegrp25-34 -0.507  0.004 -0.027       
+## agegroup35+ -0.317 -0.017  0.018  0.289</code></pre>
+<pre class="r"><code>exp(fixed.effects(glmm))</code></pre>
+<pre><code>##     (Intercept)            time txtIntervention   agegroup25-34     agegroup35+ 
+##       0.3957412       1.1548545       3.3623948       2.1575760       1.4121109</code></pre>
+<ul>
+<li><p>Time: On average for an individual, holding other variables, when
+time increases by 1 month, we would expect to see a 15.5% increase in
+the odds of reporting good health;</p></li>
+<li><p>Treatment group: On average for an individual, holding other
+variables fixed, when treatment group changes from control to
+intervention, we would expect to see a 236.2% increase in the odds of
+reporting good health;</p></li>
+<li><p>Age group 25-34: On average for an individual, holding other
+variables fixed, when age group changes from 15-24 to 25-34, we would
+expect to see a 115.8% increase in the odds of reporting good
+health;</p></li>
+<li><p>Age group 35+: On average for an individual, holding other
+variables fixed, when age group changes from 25-34 to 35+, we would
+expect to see a 41.2% increase in the odds of reporting good
+health;</p></li>
+</ul>
+<p>Difference between interpretations:</p>
+<p>The interpretation of GEE models focus on within population level
+change while the interpretation of GLMM models focus on individual level
+change.</p>
 </div>
 
 
