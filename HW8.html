@@ -360,13 +360,51 @@ display: none;
 <pre class="r"><code>library(tidyverse)
 library(dplyr)
 library(readxl)
-library(sqldf)</code></pre>
+library(sqldf)
+library(gee)</code></pre>
 <pre class="r"><code># data import
 health = read_xlsx(&quot;./HW8-HEALTH.xlsx&quot;) %&gt;%
   janitor::clean_names() %&gt;% 
-  mutate(health = as.numeric(health == &quot;Good&quot;))</code></pre>
+  mutate(health = as.numeric(health == &quot;Good&quot;),
+         time = ifelse(time==2, 3,
+                ifelse(time==3, 6,
+                ifelse(time==4, 12, 1))))</code></pre>
 <div id="question-a" class="section level3">
 <h3>Question (a)</h3>
+<pre class="r"><code>group = health %&gt;% 
+  mutate(txt = as.numeric(txt == &quot;Intervention&quot;)) %&gt;% 
+  filter(time == 1)
+
+lg = glm(txt ~ health, data = group, family = binomial(link = &#39;logit&#39;))
+summary(lg)</code></pre>
+<pre><code>## 
+## Call:
+## glm(formula = txt ~ health, family = binomial(link = &quot;logit&quot;), 
+##     data = group)
+## 
+## Deviance Residuals: 
+##    Min      1Q  Median      3Q     Max  
+## -1.216  -1.216  -1.084   1.139   1.274  
+## 
+## Coefficients:
+##             Estimate Std. Error z value Pr(&gt;|z|)
+## (Intercept)  0.09097    0.30182   0.301    0.763
+## health      -0.31412    0.45122  -0.696    0.486
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 110.85  on 79  degrees of freedom
+## Residual deviance: 110.37  on 78  degrees of freedom
+## AIC: 114.37
+## 
+## Number of Fisher Scoring iterations: 3</code></pre>
+<p><span class="math display">\[ log\frac{\pi}{1-\pi} = 0.091 -
+0.314*health \]</span> When a patient’s health changes from “poor” to
+“good”, the odds of he/she assigned to the intervention group decrease
+by 0.2696. However, as the p-value is greater than 0.05, the
+relationship is not significant here. Being in poor or good health at
+baseline wouldn’t affect the group which the patient would be assigned
+into.</p>
 </div>
 <div id="question-b" class="section level3">
 <h3>Question (b)</h3>
@@ -382,8 +420,84 @@ gee_df = sqldf(&quot;
       LEFT JOIN base
       USING(id)
       &quot;) %&gt;% 
-  filter(time != 1)
-# </code></pre>
+  filter(time != 1) 
+# fit gee model
+gee = gee(health ~ as.factor(baseline) + txt + as.factor(time) + agegroup, data=gee_df, family=&quot;binomial&quot;,id=id, corstr=&quot;unstructured&quot;, scale.fix=FALSE)</code></pre>
+<pre><code>## Beginning Cgee S-function, @(#) geeformula.q 4.13 98/01/27</code></pre>
+<pre><code>## running glm to get initial regression estimate</code></pre>
+<pre><code>##          (Intercept) as.factor(baseline)1      txtIntervention 
+##           -1.5199450            1.7192117            2.0042708 
+##     as.factor(time)6    as.factor(time)12        agegroup25-34 
+##            0.2575654            0.2366989            1.1968673 
+##          agegroup35+ 
+##            1.3958656</code></pre>
+<pre class="r"><code>summary(gee)</code></pre>
+<pre><code>## 
+##  GEE:  GENERALIZED LINEAR MODELS FOR DEPENDENT DATA
+##  gee S-function, version 4.13 modified 98/01/27 (1998) 
+## 
+## Model:
+##  Link:                      Logit 
+##  Variance to Mean Relation: Binomial 
+##  Correlation Structure:     Unstructured 
+## 
+## Call:
+## gee(formula = health ~ as.factor(baseline) + txt + as.factor(time) + 
+##     agegroup, id = id, data = gee_df, family = &quot;binomial&quot;, corstr = &quot;unstructured&quot;, 
+##     scale.fix = FALSE)
+## 
+## Summary of Residuals:
+##         Min          1Q      Median          3Q         Max 
+## -0.97980130 -0.20060701  0.09442344  0.18344971  0.83995062 
+## 
+## 
+## Coefficients:
+##                        Estimate Naive S.E.    Naive z Robust S.E.  Robust z
+## (Intercept)          -1.6578607  0.6014505 -2.7564377   0.4533989 -3.656517
+## as.factor(baseline)1  1.8164161  0.5978966  3.0380103   0.5113296  3.552339
+## txtIntervention       2.1022271  0.5954429  3.5305269   0.5362768  3.920041
+## as.factor(time)6      0.2753559  0.4747047  0.5800572   0.3368572  0.817426
+## as.factor(time)12     0.2863563  0.4083916  0.7011809   0.4161352  0.688133
+## agegroup25-34         1.3345925  0.5860828  2.2771400   0.5043829  2.645991
+## agegroup35+           1.4112905  0.9740226  1.4489299   0.7855584  1.796544
+## 
+## Estimated Scale Parameter:  1.486693
+## Number of Iterations:  4
+## 
+## Working Correlation
+##           [,1]      [,2]      [,3]
+## [1,] 1.0000000 0.1794182 0.5602284
+## [2,] 0.1794182 1.0000000 0.2104116
+## [3,] 0.5602284 0.2104116 1.0000000</code></pre>
+<pre class="r"><code>exp(gee$coefficients)</code></pre>
+<pre><code>##          (Intercept) as.factor(baseline)1      txtIntervention 
+##            0.1905462            6.1497789            8.1843772 
+##     as.factor(time)6    as.factor(time)12        agegroup25-34 
+##            1.3169993            1.3315669            3.7984479 
+##          agegroup35+ 
+##            4.1012448</code></pre>
+<p>Interpretation:</p>
+<ul>
+<li><p>Baseline: On average within a population, holding other
+variables, the odds of reporting good health would be 6.15 between
+subpopulations reporting good health compared to poor health at
+baseline;</p></li>
+<li><p>Treatment group: On average within a population, holding other
+variables, the odds of reporting good health would be 8.18 between
+subpopulations in intervention group compared to control group;</p></li>
+<li><p>6 month: On average within a population, holding other variables,
+the odds of reporting good health would be 1.32 between reports of
+subpopulations at 6 months compared to at 3 months;</p></li>
+<li><p>12 month: On average within a population, holding other
+variables, the odds of reporting good health would be 1.33 between
+reports of subpopulations at 12 months compared to at 3 months;</p></li>
+<li><p>Age group 25-34: On average within a population, holding other
+variables, the odds of reporting good health would be 3.80 between
+subpopulations of age 25-34 compared to those of age 15-24;</p></li>
+<li><p>Age group 35+: On average within a population, holding other
+variables, the odds of reporting good health would be 3.80 between
+subpopulations of age 35+ compared to those of age 15-24;</p></li>
+</ul>
 </div>
 
 

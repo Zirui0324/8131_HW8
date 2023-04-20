@@ -10,20 +10,31 @@ library(tidyverse)
 library(dplyr)
 library(readxl)
 library(sqldf)
+library(gee)
 ```
 
 ```{r}
 # data import
 health = read_xlsx("./HW8-HEALTH.xlsx") %>%
   janitor::clean_names() %>% 
-  mutate(health = as.numeric(health == "Good"))
+  mutate(health = as.numeric(health == "Good"),
+         time = ifelse(time==2, 3,
+                ifelse(time==3, 6,
+                ifelse(time==4, 12, 1))))
 ```
+
 ### Question (a)
 
 ```{r}
+group = health %>% 
+  mutate(txt = as.numeric(txt == "Intervention")) %>% 
+  filter(time == 1)
 
+lg = glm(txt ~ health, data = group, family = binomial(link = 'logit'))
+summary(lg)
 ```
-
+$$ log\frac{\pi}{1-\pi} = 0.091 - 0.314*health $$
+When a patient's health changes from "poor" to "good", the odds of he/she assigned to the intervention group decrease by `r round(1-exp(lg$coefficients)[2], 4)`. However, as the p-value is greater than 0.05, the relationship is not significant here. Being in poor or good health at baseline wouldn't affect the group which the patient would be assigned into.
 
 ### Question (b)
 
@@ -40,10 +51,26 @@ gee_df = sqldf("
       LEFT JOIN base
       USING(id)
       ") %>% 
-  filter(time != 1)
-# 
-
+  filter(time != 1) 
+# fit gee model
+gee = gee(health ~ as.factor(baseline) + txt + as.factor(time) + agegroup, data=gee_df, family="binomial",id=id, corstr="unstructured", scale.fix=FALSE)
+summary(gee)
+exp(gee$coefficients)
 ```
+
+Interpretation: 
+
+- Baseline: On average within a population, holding other variables, the odds of reporting good health would be 6.15 between subpopulations reporting good health compared to poor health at baseline;
+
+- Treatment group: On average within a population, holding other variables, the odds of reporting good health would be 8.18 between subpopulations in intervention group compared to control group;
+
+- 6 month: On average within a population, holding other variables, the odds of reporting good health would be 1.32 between reports of subpopulations at 6 months compared to at 3 months;
+
+- 12 month: On average within a population, holding other variables, the odds of reporting good health would be 1.33 between reports of subpopulations at 12 months compared to at 3 months;
+
+- Age group 25-34: On average within a population, holding other variables, the odds of reporting good health would be 3.80 between subpopulations of age 25-34 compared to those of age 15-24;
+
+- Age group 35+: On average within a population, holding other variables, the odds of reporting good health would be 3.80 between subpopulations of age 35+ compared to those of age 15-24;
 
 
 
