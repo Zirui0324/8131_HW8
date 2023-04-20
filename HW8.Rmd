@@ -2,7 +2,7 @@
 title: "HW8"
 author: "Zirui Zhang"
 date: "2023-04-19"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, message=FALSE}
@@ -91,6 +91,10 @@ exp(fixed.effects(glmm))
 - Age group 25-34: On average for an individual, holding other variables fixed, when age group changes from 15-24 to 25-34, we would expect to see a 115.8% increase in the odds of reporting good health;
 
 - Age group 35+: On average for an individual, holding other variables fixed, when age group changes from 25-34 to 35+, we would expect to see a 41.2% increase in the odds of reporting good health;
+
+- Random effects: $$ b{_i} \sim N(0, \sigma^2) $$
+where $$ \sigma = 1.545 $$
+
 
 Difference between interpretations:
 
